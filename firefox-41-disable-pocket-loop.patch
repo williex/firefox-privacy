@@ -1,6 +1,6 @@
 diff -Naur mozilla-release.bak/browser/app/profile/firefox.js mozilla-release/browser/app/profile/firefox.js
---- mozilla-release.bak/browser/app/profile/firefox.js	2015-09-23 19:26:07.341573100 +0200
-+++ mozilla-release/browser/app/profile/firefox.js	2015-09-23 19:27:16.654580158 +0200
+--- mozilla-release.bak/browser/app/profile/firefox.js	2015-09-23 20:39:52.913023730 +0200
++++ mozilla-release/browser/app/profile/firefox.js	2015-09-23 20:40:34.652027980 +0200
 @@ -1745,45 +1745,6 @@
  // (This is intentionally on the high side; see bug 746055.)
  pref("image.mem.max_decoded_image_kb", 256000);
@@ -61,9 +61,34 @@ diff -Naur mozilla-release.bak/browser/app/profile/firefox.js mozilla-release/br
  // View source tabs are only enabled by default for Dev. Ed and Nightly.
  #ifdef RELEASE_BUILD
  pref("view_source.tab", false);
+diff -Naur mozilla-release.bak/browser/base/content/browser-context.inc mozilla-release/browser/base/content/browser-context.inc
+--- mozilla-release.bak/browser/base/content/browser-context.inc	2015-09-23 20:39:52.854023724 +0200
++++ mozilla-release/browser/base/content/browser-context.inc	2015-09-23 20:41:21.297032730 +0200
+@@ -79,10 +79,6 @@
+                 label="&saveLinkCmd.label;"
+                 accesskey="&saveLinkCmd.accesskey;"
+                 oncommand="gContextMenu.saveLink();"/>
+-      <menuitem id="context-savelinktopocket"
+-                label="&saveLinkToPocketCmd.label;"
+-                accesskey="&saveLinkToPocketCmd.accesskey;"
+-                oncommand="gContextMenu.saveLinkToPocket();"/>
+       <menu id="context-marklinkMenu" label="&social.marklinkMenu.label;"
+             accesskey="&social.marklinkMenu.accesskey;">
+         <menupopup/>
+@@ -270,10 +266,6 @@
+                 label="&savePageCmd.label;"
+                 accesskey="&savePageCmd.accesskey2;"
+                 oncommand="gContextMenu.savePageAs();"/>
+-      <menuitem id="context-pocket"
+-                label="&saveToPocketCmd.label;"
+-                accesskey="&saveToPocketCmd.accesskey;"
+-                oncommand="gContextMenu.savePageToPocket();"/>
+       <menu id="context-markpageMenu" label="&social.markpageMenu.label;"
+             accesskey="&social.markpageMenu.accesskey;">
+         <menupopup/>
 diff -Naur mozilla-release.bak/browser/base/content/browser.css mozilla-release/browser/base/content/browser.css
---- mozilla-release.bak/browser/base/content/browser.css	2015-09-23 19:26:05.989572963 +0200
-+++ mozilla-release/browser/base/content/browser.css	2015-09-23 19:27:51.191583675 +0200
+--- mozilla-release.bak/browser/base/content/browser.css	2015-09-23 20:39:52.854023724 +0200
++++ mozilla-release/browser/base/content/browser.css	2015-09-23 20:40:34.652027980 +0200
 @@ -18,30 +18,6 @@
  %endif
  }
@@ -108,8 +133,8 @@ diff -Naur mozilla-release.bak/browser/base/content/browser.css mozilla-release/
  /* Note the chatbox 'width' values are duplicated in socialchat.xml */
  chatbox {
 diff -Naur mozilla-release.bak/browser/base/content/browser.js mozilla-release/browser/base/content/browser.js
---- mozilla-release.bak/browser/base/content/browser.js	2015-09-23 19:26:05.989572963 +0200
-+++ mozilla-release/browser/base/content/browser.js	2015-09-23 19:28:37.485588389 +0200
+--- mozilla-release.bak/browser/base/content/browser.js	2015-09-23 20:39:52.854023724 +0200
++++ mozilla-release/browser/base/content/browser.js	2015-09-23 20:40:34.652027980 +0200
 @@ -52,40 +52,9 @@
                                     "nsIDNSService");
  XPCOMUtils.defineLazyModuleGetter(this, "LightweightThemeManager",
@@ -176,9 +201,57 @@ diff -Naur mozilla-release.bak/browser/base/content/browser.js mozilla-release/b
        FullZoom.destroy();
  
        Services.obs.removeObserver(gSessionHistoryObserver, "browser:purge-session-history");
+diff -Naur mozilla-release.bak/browser/base/content/browser-menubar.inc mozilla-release/browser/base/content/browser-menubar.inc
+--- mozilla-release.bak/browser/base/content/browser-menubar.inc	2015-09-23 20:39:52.854023724 +0200
++++ mozilla-release/browser/base/content/browser-menubar.inc	2015-09-23 20:44:36.146052570 +0200
+@@ -387,7 +387,6 @@
+                oncommand="BookmarksEventHandler.onCommand(event, this.parentNode._placesView);"
+                onclick="BookmarksEventHandler.onClick(event, this.parentNode._placesView);"
+                onpopupshowing="BookmarkingUI.onMainMenuPopupShowing(event);
+-                               BookmarkingUI.updatePocketItemVisibility('menu_');
+                                if (!this.parentNode._placesView)
+                                  new PlacesMenu(event, 'place:folder=BOOKMARKS_MENU');"
+                tooltip="bhTooltip" popupsinherittooltip="true">
+@@ -396,12 +395,6 @@
+                 command="Browser:ShowAllBookmarks"
+                 key="manBookmarkKb"/>
+       <menuseparator id="organizeBookmarksSeparator"/>
+-      <menuitem id="menu_pocket" label="&pocketMenuitem.label;"
+-#ifndef XP_MACOSX
+-                class="menuitem-iconic"
+-#endif
+-                oncommand="openUILink(Pocket.listURL, event);"/>
+-      <menuseparator id="menu_pocketSeparator"/>
+       <menuitem id="menu_bookmarkThisPage"
+                 command="Browser:AddBookmarkAs"
+                 observes="bookmarkThisPageBroadcaster"
+diff -Naur mozilla-release.bak/browser/base/content/browser-places.js mozilla-release/browser/base/content/browser-places.js
+--- mozilla-release.bak/browser/base/content/browser-places.js	2015-09-23 20:39:52.855023724 +0200
++++ mozilla-release/browser/base/content/browser-places.js	2015-09-23 20:44:55.179054508 +0200
+@@ -1565,12 +1565,6 @@
+     PlacesCommandHook.updateBookmarkAllTabsCommand();
+   },
+ 
+-  updatePocketItemVisibility: function BUI_updatePocketItemVisibility(prefix) {
+-    let hidden = !CustomizableUI.getPlacementOfWidget("pocket-button");
+-    document.getElementById(prefix + "pocket").hidden = hidden;
+-    document.getElementById(prefix + "pocketSeparator").hidden = hidden;
+-  },
+-
+   _showBookmarkedNotification: function BUI_showBookmarkedNotification() {
+     function getCenteringTransformForRects(rectToPosition, referenceRect) {
+       let topDiff = referenceRect.top - rectToPosition.top;
+@@ -1692,7 +1686,6 @@
+ 
+   onPanelMenuViewShowing: function BUI_onViewShowing(aEvent) {
+     this._updateBookmarkPageMenuItem();
+-    this.updatePocketItemVisibility("panelMenu_");
+     // Update checked status of the toolbar toggle.
+     let viewToolbar = document.getElementById("panelMenu_viewBookmarksToolbar");
+     let personalToolbar = document.getElementById("PersonalToolbar");
 diff -Naur mozilla-release.bak/browser/base/content/browser.xul mozilla-release/browser/base/content/browser.xul
---- mozilla-release.bak/browser/base/content/browser.xul	2015-09-23 19:26:05.988572963 +0200
-+++ mozilla-release/browser/base/content/browser.xul	2015-09-23 19:29:53.102596088 +0200
+--- mozilla-release.bak/browser/base/content/browser.xul	2015-09-23 20:39:52.854023724 +0200
++++ mozilla-release/browser/base/content/browser.xul	2015-09-23 20:40:34.653027980 +0200
 @@ -297,18 +297,6 @@
             noautofocus="true"
             position="topcenter topright"/>
@@ -231,8 +304,8 @@ diff -Naur mozilla-release.bak/browser/base/content/browser.xul mozilla-release/
  #ifndef XP_MACOSX
                        class="menuitem-iconic subviewbutton"
 diff -Naur mozilla-release.bak/browser/base/content/nsContextMenu.js mozilla-release/browser/base/content/nsContextMenu.js
---- mozilla-release.bak/browser/base/content/nsContextMenu.js	2015-09-23 19:26:05.990572963 +0200
-+++ mozilla-release/browser/base/content/nsContextMenu.js	2015-09-23 19:30:33.990600252 +0200
+--- mozilla-release.bak/browser/base/content/nsContextMenu.js	2015-09-23 20:39:52.855023724 +0200
++++ mozilla-release/browser/base/content/nsContextMenu.js	2015-09-23 20:40:34.653027980 +0200
 @@ -10,8 +10,6 @@
  
  XPCOMUtils.defineLazyModuleGetter(this, "CustomizableUI",
@@ -283,9 +356,35 @@ diff -Naur mozilla-release.bak/browser/base/content/nsContextMenu.js mozilla-rel
    printFrame: function CM_printFrame() {
      PrintUtils.print(this.target.ownerDocument.defaultView, this.browser);
    },
+diff -Naur mozilla-release.bak/browser/components/customizableui/content/panelUI.inc.xul mozilla-release/browser/components/customizableui/content/panelUI.inc.xul
+--- mozilla-release.bak/browser/components/customizableui/content/panelUI.inc.xul	2015-09-23 20:39:52.953023734 +0200
++++ mozilla-release/browser/components/customizableui/content/panelUI.inc.xul	2015-09-23 20:43:15.586044367 +0200
+@@ -111,10 +111,6 @@
+                        observes="bookmarkThisPageBroadcaster"
+                        command="Browser:AddBookmarkAs"
+                        onclick="PanelUI.hide();"/>
+-        <toolbarseparator id="panelMenu_pocketSeparator"/>
+-        <toolbarbutton id="panelMenu_pocket" label="&pocketMenuitem.label;"
+-                       class="subviewbutton cui-withicon"
+-                       oncommand="openUILink(Pocket.listURL, event);"/>
+         <toolbarseparator/>
+         <toolbarbutton id="panelMenu_viewBookmarksSidebar"
+                        label="&viewBookmarksSidebar2.label;"
+@@ -241,11 +237,6 @@
+       </vbox>
+     </panelview>
+ 
+-    <panelview id="PanelUI-pocketView" flex="1">
+-      <vbox class="panel-subview-body">
+-      </vbox>
+-    </panelview>
+-
+ 
+   </panelmultiview>
+   <!-- These menupopups are located here to prevent flickering,
 diff -Naur mozilla-release.bak/browser/components/customizableui/CustomizableUI.jsm mozilla-release/browser/components/customizableui/CustomizableUI.jsm
---- mozilla-release.bak/browser/components/customizableui/CustomizableUI.jsm	2015-09-23 19:26:07.381573104 +0200
-+++ mozilla-release/browser/components/customizableui/CustomizableUI.jsm	2015-09-23 19:31:02.045603108 +0200
+--- mozilla-release.bak/browser/components/customizableui/CustomizableUI.jsm	2015-09-23 20:39:52.951023734 +0200
++++ mozilla-release/browser/components/customizableui/CustomizableUI.jsm	2015-09-23 20:40:34.653027980 +0200
 @@ -205,18 +205,8 @@
        "bookmarks-menu-button",
        "downloads-button",
@@ -322,8 +421,8 @@ diff -Naur mozilla-release.bak/browser/components/customizableui/CustomizableUI.
  
    _placeNewDefaultWidgetsInArea: function(aArea) {
 diff -Naur mozilla-release.bak/browser/components/customizableui/CustomizableWidgets.jsm mozilla-release/browser/components/customizableui/CustomizableWidgets.jsm
---- mozilla-release.bak/browser/components/customizableui/CustomizableWidgets.jsm	2015-09-23 19:26:07.381573104 +0200
-+++ mozilla-release/browser/components/customizableui/CustomizableWidgets.jsm	2015-09-23 19:32:03.751609391 +0200
+--- mozilla-release.bak/browser/components/customizableui/CustomizableWidgets.jsm	2015-09-23 20:39:52.951023734 +0200
++++ mozilla-release/browser/components/customizableui/CustomizableWidgets.jsm	2015-09-23 20:40:34.654027980 +0200
 @@ -18,8 +18,6 @@
    "resource:///modules/PlacesUIUtils.jsm");
  XPCOMUtils.defineLazyModuleGetter(this, "RecentlyClosedTabsAndWindowsMenuUtils",
@@ -439,8 +538,8 @@ diff -Naur mozilla-release.bak/browser/components/customizableui/CustomizableWid
  let e10sDisabled = false;
  #ifdef XP_MACOSX
 diff -Naur mozilla-release.bak/browser/components/moz.build mozilla-release/browser/components/moz.build
---- mozilla-release.bak/browser/components/moz.build	2015-09-23 19:26:07.380573104 +0200
-+++ mozilla-release/browser/components/moz.build	2015-09-23 19:32:21.725611222 +0200
+--- mozilla-release.bak/browser/components/moz.build	2015-09-23 20:39:52.950023734 +0200
++++ mozilla-release/browser/components/moz.build	2015-09-23 20:40:34.654027980 +0200
 @@ -10,10 +10,8 @@
      'dirprovider',
      'downloads',
@@ -453,8 +552,8 @@ diff -Naur mozilla-release.bak/browser/components/moz.build mozilla-release/brow
      'privatebrowsing',
      'readinglist',
 diff -Naur mozilla-release.bak/browser/components/pocket/moz.build mozilla-release/browser/components/pocket/moz.build
---- mozilla-release.bak/browser/components/pocket/moz.build	2015-09-23 19:26:07.383573105 +0200
-+++ mozilla-release/browser/components/pocket/moz.build	2015-09-23 19:32:30.085612073 +0200
+--- mozilla-release.bak/browser/components/pocket/moz.build	2015-09-23 20:39:52.953023734 +0200
++++ mozilla-release/browser/components/pocket/moz.build	2015-09-23 20:40:34.654027980 +0200
 @@ -3,5 +3,3 @@
  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
  
@@ -462,8 +561,8 @@ diff -Naur mozilla-release.bak/browser/components/pocket/moz.build mozilla-relea
 -
 -EXTRA_JS_MODULES += ['Pocket.jsm']
 diff -Naur mozilla-release.bak/browser/components/uitour/UITour.jsm mozilla-release/browser/components/uitour/UITour.jsm
---- mozilla-release.bak/browser/components/uitour/UITour.jsm	2015-09-23 19:26:07.390573105 +0200
-+++ mozilla-release/browser/components/uitour/UITour.jsm	2015-09-23 19:36:05.604634018 +0200
+--- mozilla-release.bak/browser/components/uitour/UITour.jsm	2015-09-23 20:39:52.959023735 +0200
++++ mozilla-release/browser/components/uitour/UITour.jsm	2015-09-23 20:40:34.654027980 +0200
 @@ -149,65 +149,6 @@
        query: "#panic-button",
        widgetName: "panic-button",
@@ -668,9 +767,23 @@ diff -Naur mozilla-release.bak/browser/components/uitour/UITour.jsm mozilla-rele
        default:
          log.error("setConfiguration: Unknown configuration requested: " + aConfiguration);
          break;
+diff -Naur mozilla-release.bak/browser/locales/en-US/chrome/browser/browser.dtd mozilla-release/browser/locales/en-US/chrome/browser/browser.dtd
+--- mozilla-release.bak/browser/locales/en-US/chrome/browser/browser.dtd	2015-09-23 20:39:52.910023730 +0200
++++ mozilla-release/browser/locales/en-US/chrome/browser/browser.dtd	2015-09-23 20:42:11.545037846 +0200
+@@ -851,10 +851,3 @@
+ <!-- Pre-landed strings for bug 1123519 -->
+ <!ENTITY readingList.sidebar.add.label            "Add to Reading List">
+ <!ENTITY readingList.sidebar.add.tooltip          "Add this page to your Reading List">
+-
+-<!-- LOCALIZATION NOTE (saveToPocketCmd.label, saveLinkToPocketCmd.label, pocketMenuitem.label): Pocket is a brand name -->
+-<!ENTITY saveToPocketCmd.label     "Save Page to Pocket">
+-<!ENTITY saveToPocketCmd.accesskey "k">
+-<!ENTITY saveLinkToPocketCmd.label     "Save Link to Pocket">
+-<!ENTITY saveLinkToPocketCmd.accesskey "o">
+-<!ENTITY pocketMenuitem.label      "View Pocket List">
 diff -Naur mozilla-release.bak/browser/locales/jar.mn mozilla-release/browser/locales/jar.mn
---- mozilla-release.bak/browser/locales/jar.mn	2015-09-23 19:26:07.336573100 +0200
-+++ mozilla-release/browser/locales/jar.mn	2015-09-23 19:36:21.048635590 +0200
+--- mozilla-release.bak/browser/locales/jar.mn	2015-09-23 20:39:52.909023730 +0200
++++ mozilla-release/browser/locales/jar.mn	2015-09-23 20:40:34.654027980 +0200
 @@ -26,7 +26,6 @@
      locale/browser/browser.dtd                     (%chrome/browser/browser.dtd)
      locale/browser/baseMenuOverlay.dtd             (%chrome/browser/baseMenuOverlay.dtd)
@@ -688,8 +801,8 @@ diff -Naur mozilla-release.bak/browser/locales/jar.mn mozilla-release/browser/lo
      locale/browser/newTab.properties               (%chrome/browser/newTab.properties)
      locale/browser/pageInfo.dtd                    (%chrome/browser/pageInfo.dtd)
 diff -Naur mozilla-release.bak/browser/themes/linux/browser.css mozilla-release/browser/themes/linux/browser.css
---- mozilla-release.bak/browser/themes/linux/browser.css	2015-09-23 19:26:07.357573102 +0200
-+++ mozilla-release/browser/themes/linux/browser.css	2015-09-23 19:36:58.803639435 +0200
+--- mozilla-release.bak/browser/themes/linux/browser.css	2015-09-23 20:39:52.928023732 +0200
++++ mozilla-release/browser/themes/linux/browser.css	2015-09-23 20:40:34.654027980 +0200
 @@ -527,12 +527,6 @@
    list-style-image: url("chrome://browser/skin/readinglist/readinglist-icon.svg");
  }
@@ -721,8 +834,8 @@ diff -Naur mozilla-release.bak/browser/themes/linux/browser.css mozilla-release/
    max-width : 36px;
  }
 diff -Naur mozilla-release.bak/browser/themes/linux/jar.mn mozilla-release/browser/themes/linux/jar.mn
---- mozilla-release.bak/browser/themes/linux/jar.mn	2015-09-23 19:26:07.358573102 +0200
-+++ mozilla-release/browser/themes/linux/jar.mn	2015-09-23 19:37:12.267640806 +0200
+--- mozilla-release.bak/browser/themes/linux/jar.mn	2015-09-23 20:39:52.929023732 +0200
++++ mozilla-release/browser/themes/linux/jar.mn	2015-09-23 20:40:34.655027980 +0200
 @@ -138,12 +138,6 @@
    skin/classic/browser/webRTC-camera-white-16.png     (../shared/webrtc/camera-white-16.png)
    skin/classic/browser/webRTC-microphone-white-16.png (../shared/webrtc/microphone-white-16.png)
@@ -737,8 +850,8 @@ diff -Naur mozilla-release.bak/browser/themes/linux/jar.mn mozilla-release/brows
    skin/classic/browser/controlcenter/arrow-subview.svg  (../shared/controlcenter/arrow-subview.svg)
    skin/classic/browser/controlcenter/conn-not-secure.svg  (../shared/controlcenter/conn-not-secure.svg)
 diff -Naur mozilla-release.bak/browser/themes/osx/browser.css mozilla-release/browser/themes/osx/browser.css
---- mozilla-release.bak/browser/themes/osx/browser.css	2015-09-23 19:26:07.353573102 +0200
-+++ mozilla-release/browser/themes/osx/browser.css	2015-09-23 19:38:59.077651682 +0200
+--- mozilla-release.bak/browser/themes/osx/browser.css	2015-09-23 20:39:52.924023731 +0200
++++ mozilla-release/browser/themes/osx/browser.css	2015-09-23 20:40:34.655027980 +0200
 @@ -574,24 +574,6 @@
    list-style-image: url("chrome://browser/skin/readinglist/readinglist-icon.svg");
  }
@@ -815,8 +928,8 @@ diff -Naur mozilla-release.bak/browser/themes/osx/browser.css mozilla-release/br
  .popup-notification-body[popupid="addon-install-confirmation"] {
    width: 28em;
 diff -Naur mozilla-release.bak/browser/themes/osx/jar.mn mozilla-release/browser/themes/osx/jar.mn
---- mozilla-release.bak/browser/themes/osx/jar.mn	2015-09-23 19:26:07.354573102 +0200
-+++ mozilla-release/browser/themes/osx/jar.mn	2015-09-23 19:39:32.194655054 +0200
+--- mozilla-release.bak/browser/themes/osx/jar.mn	2015-09-23 20:39:52.925023731 +0200
++++ mozilla-release/browser/themes/osx/jar.mn	2015-09-23 20:40:34.655027980 +0200
 @@ -178,16 +178,6 @@
    skin/classic/browser/webRTC-sharingScreen-menubar.png
    skin/classic/browser/webRTC-sharingScreen-menubar@2x.png
@@ -846,8 +959,8 @@ diff -Naur mozilla-release.bak/browser/themes/osx/jar.mn mozilla-release/browser
  % override chrome://browser/skin/menuPanel-customize@2x.png                chrome://browser/skin/yosemite/menuPanel-customize@2x.png               os=Darwin osversion>=10.10
  % override chrome://browser/skin/menuPanel-exit.png                        chrome://browser/skin/yosemite/menuPanel-exit.png                       os=Darwin osversion>=10.10
 diff -Naur mozilla-release.bak/browser/themes/shared/browser.inc mozilla-release/browser/themes/shared/browser.inc
---- mozilla-release.bak/browser/themes/shared/browser.inc	2015-09-23 19:26:07.342573100 +0200
-+++ mozilla-release/browser/themes/shared/browser.inc	2015-09-23 19:39:46.562656517 +0200
+--- mozilla-release.bak/browser/themes/shared/browser.inc	2015-09-23 20:39:52.914023730 +0200
++++ mozilla-release/browser/themes/shared/browser.inc	2015-09-23 20:40:34.655027980 +0200
 @@ -2,7 +2,7 @@
  
  % Note that zoom-reset-button is a bit different since it doesn't use an image and thus has the image with display: none.
@@ -858,8 +971,8 @@ diff -Naur mozilla-release.bak/browser/themes/shared/browser.inc mozilla-release
  %ifdef XP_MACOSX
  % Prior to 10.7 there wasn't a native fullscreen button so we use #restore-button to exit fullscreen
 diff -Naur mozilla-release.bak/browser/themes/shared/menupanel.inc.css mozilla-release/browser/themes/shared/menupanel.inc.css
---- mozilla-release.bak/browser/themes/shared/menupanel.inc.css	2015-09-23 19:26:07.342573100 +0200
-+++ mozilla-release/browser/themes/shared/menupanel.inc.css	2015-09-23 19:40:44.796662446 +0200
+--- mozilla-release.bak/browser/themes/shared/menupanel.inc.css	2015-09-23 20:39:52.914023730 +0200
++++ mozilla-release/browser/themes/shared/menupanel.inc.css	2015-09-23 20:40:34.655027980 +0200
 @@ -178,55 +178,10 @@
      -moz-image-region: rect(0px, 960px, 32px, 928px);
    }
@@ -969,8 +1082,8 @@ diff -Naur mozilla-release.bak/browser/themes/shared/menupanel.inc.css mozilla-r
    toolbarpaletteitem[place="palette"] > #new-tab-button {
      -moz-image-region: rect(0px, 1088px, 64px, 1024px);
 diff -Naur mozilla-release.bak/browser/themes/shared/toolbarbuttons.inc.css mozilla-release/browser/themes/shared/toolbarbuttons.inc.css
---- mozilla-release.bak/browser/themes/shared/toolbarbuttons.inc.css	2015-09-23 19:26:07.342573100 +0200
-+++ mozilla-release/browser/themes/shared/toolbarbuttons.inc.css	2015-09-23 19:47:33.730704086 +0200
+--- mozilla-release.bak/browser/themes/shared/toolbarbuttons.inc.css	2015-09-23 20:39:52.914023730 +0200
++++ mozilla-release/browser/themes/shared/toolbarbuttons.inc.css	2015-09-23 20:40:34.656027981 +0200
 @@ -184,56 +184,10 @@
    -moz-image-region: rect(0, 720px, 18px, 702px);
  }
@@ -1081,8 +1194,8 @@ diff -Naur mozilla-release.bak/browser/themes/shared/toolbarbuttons.inc.css mozi
  }
  %endif
 diff -Naur mozilla-release.bak/browser/themes/windows/browser.css mozilla-release/browser/themes/windows/browser.css
---- mozilla-release.bak/browser/themes/windows/browser.css	2015-09-23 19:26:07.348573101 +0200
-+++ mozilla-release/browser/themes/windows/browser.css	2015-09-23 19:41:54.534669547 +0200
+--- mozilla-release.bak/browser/themes/windows/browser.css	2015-09-23 20:39:52.920023731 +0200
++++ mozilla-release/browser/themes/windows/browser.css	2015-09-23 20:40:34.656027981 +0200
 @@ -621,16 +621,6 @@
    #bookmarks-menu-button.toolbarbutton-1 > .toolbarbutton-menubutton-dropmarker > .dropmarker-icon {
      list-style-image: url("chrome://browser/skin/Toolbar-lunaSilver.png");
@@ -1134,8 +1247,8 @@ diff -Naur mozilla-release.bak/browser/themes/windows/browser.css mozilla-releas
  
  .KUI-panel {
 diff -Naur mozilla-release.bak/browser/themes/windows/jar.mn mozilla-release/browser/themes/windows/jar.mn
---- mozilla-release.bak/browser/themes/windows/jar.mn	2015-09-23 19:26:07.349573101 +0200
-+++ mozilla-release/browser/themes/windows/jar.mn	2015-09-23 19:42:23.828672530 +0200
+--- mozilla-release.bak/browser/themes/windows/jar.mn	2015-09-23 20:39:52.921023731 +0200
++++ mozilla-release/browser/themes/windows/jar.mn	2015-09-23 20:40:34.656027981 +0200
 @@ -184,22 +184,6 @@
          skin/classic/browser/webRTC-camera-white-16.png              (../shared/webrtc/camera-white-16.png)
          skin/classic/browser/webRTC-microphone-white-16.png          (../shared/webrtc/microphone-white-16.png)
