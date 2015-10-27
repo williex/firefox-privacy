@@ -5,3 +5,9 @@ This patch disables sponsored tiles in the "new tab" page. The new tab page is r
 
 #firefox-disable-pocket-loop.patch
 Disable building the pocket plugin and firefox hello. These two programs should not be bundled with the browser, but installed as separate addons.
+
+#firefox-38-mozconfig
+Privacy friendly mozconfig settings. Copy to the extracted source dir and name mozconfig
+
+#firefox-38-prefs.patch
+Set some sensible defaults, see the patch for details. Most important changes are disabling healthreport services and disable going to an URL when you paste somewhere in a webpage
