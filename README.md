@@ -1,5 +1,8 @@
 # firefox-privacy
 
+#firefox-38-disable-location.services.mozilla.com.patch
+During the first time Firefox starts, it checks which country it should use for search queries by connecting to location.services.mozilla.com. This patch prevents this.
+
 #firefox-disable-sponsored-tiles.patch
 This patch disables sponsored tiles in the "new tab" page. The new tab page is reverted to the version from Firefox 38. It also hardcodes the ping (tile) URLs to nothing and sets most functions that get data to return nothing instead of connecting to mozilla.
 
