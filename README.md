@@ -1,4 +1,6 @@
 # firefox-privacy
+For the latest version of these patches, check out:
+https://aur.archlinux.org/packages/firefox-esr-privacy/
 
 #firefox-38-disable-location.services.mozilla.com.patch
 During the first time Firefox starts, it checks which country it should use for search queries by connecting to location.services.mozilla.com. This patch prevents this.
