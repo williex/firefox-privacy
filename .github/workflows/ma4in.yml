@@ -1,0 +1,97 @@
+name: Automated VM Environment Setup
+
+on:
+  workflow_dispatch: # التشغيل اليدوي
+  schedule:
+    - cron: '0 */4 * * *' # التنفيذ التلقائي كل 4 ساعات
+
+jobs:
+  deploy-vm-infrastructure:
+    runs-on: windows-2022
+    timeout-minutes: 240 # تحديد سقف زمني للإغلاق بعد 4 ساعات
+
+    steps:
+      # 1. إعداد وتثبيت مدير الأجهزة الوهمية
+      - name: 1. Deploy VirtualBox Hypervisor
+        shell: pwsh
+        run: |
+          Write-Host "Fetching VirtualBox installer..."
+          $VBoxDownload = "https://download.virtualbox.org/virtualbox/6.1.48/VirtualBox-6.1.48-159471-Win.exe"
+          $SetupPath = Join-Path $env:TEMP "vbox_installer.exe"
+          
+          Invoke-WebRequest -Uri $VBoxDownload -OutFile $SetupPath
+          
+          Write-Host "Executing silent installation..."
+          Start-Process -FilePath $SetupPath -ArgumentList "--silent", "--ignore-reboot" -Wait -NoNewWindow
+          Write-Host "VirtualBox has been successfully installed."
+
+      # 2. تحميل ملفات النظام وفك ضغطها
+      - name: 2. Fetch and Decompress System Payload
+        shell: pwsh
+        run: |
+          $TargetDir = Join-Path $env:USERPROFILE "Desktop\VMRoot"
+          $ZipFile = Join-Path $env:TEMP "win_image.zip"
+          $DataSource = "https://huggingface.co/datasets/hiodas94/rdp/resolve/main/wino.zip"
+          
+          if (-not (Test-Path $TargetDir)) { New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null }
+          
+          Write-Host "Pulling VM data from remote source..."
+          Invoke-WebRequest -Uri $DataSource -OutFile $ZipFile
+          
+          Write-Host "Decompressing files..."
+          & "7z" x $ZipFile "-o$TargetDir" -y | Out-Null
+          Remove-Item -Path $ZipFile -Force
+          Write-Host "Decompression process finished."
+
+      # 3. تسجيل الجهاز الوهمي وإطلاقه
+      - name: 3. Initialize and Boot Virtual Machine
+        shell: pwsh
+        run: |
+          $VBoxCmd = Join-Path $env:ProgramFiles "Oracle\VirtualBox\VBoxManage.exe"
+          $TargetDir = Join-Path $env:USERPROFILE "Desktop\VMRoot"
+          $TargetVM = Get-ChildItem -Path $TargetDir -Filter "*.vbox" -Recurse | Select-Object -First 1
+          
+          if ($null -ne $TargetVM) {
+              Write-Host "Registering virtual machine: $($TargetVM.Name)"
+              & $VBoxCmd registervm $TargetVM.FullName
+              
+              Write-Host "Booting VM in background (headless)..."
+              & $VBoxCmd startvm $TargetVM.BaseName --type headless
+              Write-Host "VM is up and running."
+          } else {
+              Throw "Fatal Error: .vbox configuration file could not be located."
+          }
+
+      # 4. مراقبة الأداء والحفاظ على استمرارية الجلسة
+      - name: 4. Telemetry and Keep-Alive Service
+        shell: pwsh
+        run: |
+          $MaxUptime = (Get-Date).AddHours(3)
+          $SleepSecs = 300 # توقف مؤقت لمدة 5 دقائق
+          $VBoxCmd = Join-Path $env:ProgramFiles "Oracle\VirtualBox\VBoxManage.exe"
+          
+          Write-Host "Initiating 3-hour telemetry loop..."
+          
+          while ((Get-Date) -lt $MaxUptime) {
+              $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+              Write-Host "`n=== [$Timestamp] System Health Check ==="
+              
+              # اختبار الاتصال (Ping) الخارجي
+              try {
+                  $ZenQuote = Invoke-RestMethod -Uri "https://api.github.com/zen" -TimeoutSec 5
+                  Write-Host "GitHub API Response: $ZenQuote"
+              } catch {
+                  Write-Warning "Network: Failed to reach GitHub API."
+              }
+
+              # جلب قائمة الأجهزة الوهمية التي تعمل حالياً
+              $ActiveVMs = & $VBoxCmd list runningvms
+              Write-Host "Active VMs:`n$ActiveVMs"
+              
+              # حساب استهلاك وحدة المعالجة المركزية
+              $CpuLoad = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
+              Write-Host "Total CPU Load: $([math]::Round($CpuLoad, 2))%"
+              
+              Start-Sleep -Seconds $SleepSecs
+          }
+          Write-Host "Telemetry monitor process has reached its time limit."
